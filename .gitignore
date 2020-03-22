@@ -1,0 +1,12 @@
+.idea
+my
+**/*.DS_Store
+bashrc.tmp
+**/*.tmp
+bashrc.ext
+bashrc.ext.old
+hot.code-workspace
+**/*node_modules
+**/*package-lock.json
+**/dist
+
