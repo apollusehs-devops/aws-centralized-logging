@@ -4,6 +4,41 @@ The AWS Centralized Logging Solution is a reference implementation that provides
 ## Getting Started
 To get started with the AWS Centralized Logging Solution, please review the solution documentation. https://aws.amazon.com/answers/logging/centralized-logging/
 
+
+## Launch at China Region
+
+### Architectural changes
+
+See following architecture as changed edition.
+
+![architecture diagram with Nginx](./docs/nginx-diagram.jpg)
+
+
+### Quick start
+
+1. Generate key pair through admin console or awccli.
+```
+$ aws ec2  create-key-pair --key-name nginx-keypair
+```
+The output is an ASCII version of the private key and key fingerprint. You need to save the key (KeyMaterial) to a file.
+
+2. Click [HeRe](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?&templateURL=https:%2F%2Fs3.amazonaws.com%2Fsolutions-reference%2Fcentralized-logging%2Flatest%2Fcentralized-logging-primary.template) for quick launch and choose 'yes' at China region.
+
+### Notice
+1. Add addtional user to access Kinbana.
+```
+# format// user:password
+$ echo ${ProxyUsername}:`openssl passwd -apr1 ${ProxyPass}` >> /etc/nginx/conf.d/kibana.htpasswd
+```
+2. Adjust buffer for proxy.
+3. Replace certificate for proxy server.
+```
+# replace certificate
+$ cp new_certificate /etc/nginx/cert.crt
+# replace certificate key
+$ cp new_certificate_key /etc/nginx/cert.key
+```
+
 ## Upgrading to v3.2
 Customers using v3.0.0 can upgrade to v3.2 by loading the new primary template. Spoke templates, however, must be removed and installed from the v3.2 spoke template.
 

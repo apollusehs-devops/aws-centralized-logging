@@ -1,19 +1,27 @@
+# Basic authentication instead of Cognito
+#
 AWSTemplateFormatVersion: "2010-09-09"
 
 Description: >
   Nginx stack is for provisioning all network resources and Nginx reverse proxy.
 
 Parameters:
+
+  # Cidr for VPC
   Cidr4Vpc:
-    Description: "CIDR for VPC."
+    Description: CIDR for VPC.
     Type: String
     Default:  "10.0.0.0/16"
+  
+  #Cidr for Subnet
   Cidr4Subnet:
-    Description: "Comma-delimited list of CIDR blocks."
+    Description: Comma-delimited list of CIDR blocks.
     Type: CommaDelimitedList
     Default: "10.0.10.0/24, 10.0.30.0/24, 10.0.60.0/22, 10.0.80.0/22"
+  
+  # Lastest version Amazon linux2 for Nginx instance
   Ami:
-    Description: "The Amazon Machine Image and the default value is latest version."
+    Description: The Amazon Machine Image and the default value is latest version.
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
     Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
   InstanceType:
@@ -26,18 +34,28 @@ Parameters:
       - r4.large
       - r5.large
     Default: c5.large
+  
+  # Password to access Kinbana
   KeyPairName:
-    Description:  "Key pair for ec2."
+    Description:  Key pair for ec2.
     Type: String
+  
+  # Doamin name for ElasticSearch
   ESDomain:
-    Description:  "Domain name of ElasticSerach."
+    Description:  Domain name of ElasticSerach.
     Type: String
+  
+  # Endpoint for ElasticSearch
   ESDomainEndpoint:
-    Description:  "Domain endpoint of ElasticSerach."
+    Description:  Domain endpoint of ElasticSerach.
     Type: String
+  
+  # User to access Kinbana
   ProxyUsername:
     Type: String
     Description: User name for Kinbana access via the proxy server
+  
+  # Password to access Kinbana
   ProxyPass:
     NoEcho: 'true'
     Description: Password for Kinbana access via the proxy server
@@ -48,7 +66,17 @@ Parameters:
     ConstraintDescription: >-
       Must contain at least 1 Upper/Lower alphanumeric characters and number
       (Mininum lenght is 6)
+  # Condition for China Region  
+  AtChinaRegion:
+    Description: Deploy the solution at China Region with specific adjustment.
+    Type: String
+    Default: 'No'
+    AllowedValues:
+      - 'Yes'
+      - 'No'
 
+Conditions:
+  AtChina: !Equals [!Ref AtChinaRegion, 'Yes']
 
 Resources:
   BaseVPC:
@@ -372,7 +400,7 @@ Resources:
                 --query "AutoScalingInstances[?AutoScalingGroupName=='${AWS::StackName}-nginx-asg'].InstanceId") \
                 --query "Reservations[].Instances[].PublicIpAddress" |tr '\n' ' '`
               export NEW_POLICY=$(aws es describe-elasticsearch-domain-config --region ${AWS::Region} \
-                --domain-name centralizedlogging |\
+                --domain-name ${ESDomain} |\
                 jq '.DomainConfig.AccessPolicies.Options' |\
                 sed -e 's/\\//g;s/^"//;s/"$//'|sed -e 's/"aws:SourceIp".*}}},/"aws:SourceIp":'"$NGINX_NODE_IPS"'}}},/g')
               aws es update-elasticsearch-domain-config --region ${AWS::Region} --domain-name cltest \
@@ -396,7 +424,11 @@ Resources:
         - Effect: Allow
           Principal:
             AWS: !Ref AWS::AccountId
-            Service: ec2.amazonaws.com
+            Service: 
+              !If 
+                - AtChina
+                - "ec2.amazonaws.com.cn"
+                - "ec2.amazonaws.com"
           Action:
           - sts:AssumeRole
       Path: "/"
@@ -415,7 +447,8 @@ Resources:
         - Effect: Allow
           Action:
             - "ec2:DescribeInstances"
-            - "autoscaling:DescribeAutoScalingGroups" 
+            - "autoscaling:DescribeAutoScalingGroups"
+            - "autoscaling:DescribeAutoScalingInstances"
           Resource: "*"
       Roles:
         - !Ref NginxNodeRole
@@ -564,7 +597,7 @@ Resources:
           IpProtocol: TCP
           FromPort: 443
           ToPort: 443
-          CidrIp: '10.0.0.0/16'
+          CidrIp: '0.0.0.0/0'
 
       Tags:
         - Key: Name

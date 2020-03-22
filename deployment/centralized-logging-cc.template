@@ -21,17 +21,17 @@ Parameters:
   DomainAdminEmail:
     Type: String
     AllowedPattern: '^[_A-Za-z0-9-\+\.]+(\.[_A-Za-z0-9-]+)*@[A-Za-z0-9-]+(\.[A-Za-z0-9]+)*(\.[A-Za-z]{2,})$'
-    Description: E-mail address of the Elasticsearch admin
+    Description: E-mail address of the Elasticsearch admin, also user name for Kinbana access via the proxy server at China Region.
 
   # Email address for Cognito Admin user
   CognitoAdminEmail:
     Type: String
     AllowedPattern: '^[_A-Za-z0-9-\+\.]+(\.[_A-Za-z0-9-]+)*@[A-Za-z0-9-]+(\.[A-Za-z0-9]+)*(\.[A-Za-z]{2,})$'
-    Description: E-mail address of the Cognito admin
+    Description: E-mail address of the Cognito admin.
 
   # ES cluster size
   ClusterSize:
-    Description: Amazon ES cluster size; small (4 data nodes), medium (6 data nodes), large (6 data nodes)
+    Description: Amazon ES cluster size; small (4 data nodes), medium (6 data nodes), large (6 data nodes).
     Type: String
     Default: Small
     AllowedValues:
@@ -82,6 +82,23 @@ Parameters:
       - 'Yes'
       - 'No'
 
+  # Key pair for ssh to Nginx instance
+  KeyPairName:
+    Description:  Key pair for Nginx instance.
+    Type: AWS::EC2::KeyPair::KeyName
+
+  # Password to access Kinbana
+  ProxyPass:
+    NoEcho: 'true'
+    Description: Password for Kinbana access via the proxy server.
+    Type: String
+    MinLength: '6'
+    MaxLength: '41'
+    AllowedPattern: '^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z]).{6,}$'
+    ConstraintDescription: >-
+      Must contain at least 1 Upper/Lower alphanumeric characters and number
+      (Mininum lenght is 6)
+
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
@@ -106,11 +123,12 @@ Metadata:
         default: Do you deploy at China Region?
       Parameters:
         - AtChinaRegion
+        - KeyPairName
     ParameterLabels:
       CognitoAdminEmail:
         default: Cognito Admin email address
       DomainAdminEmail:
-        default: Elasticsearch Domain Admin email address
+        default: Elasticsearch Domain Admin email address (Also user name for Kinbana access via the proxy server at China Region.)
       DOMAINNAME:
         default: Elasticsearch Domain name
       ClusterSize:
@@ -125,6 +143,8 @@ Metadata:
         default: Subnet for Sample Web Server
       AtChinaRegion:
         default: Deploy the solution at China Region
+      KeyPairName:
+        default: Key pair for ssh to Nginx instance
 
 Mappings:
   InstanceMap:
@@ -898,8 +918,9 @@ Resources:
         ESDomain: !Ref DOMAINNAME
         DomainEndpoint: !Sub ${ElasticsearchAWSLogs.DomainEndpoint}
         ProxyUsername: !Ref DomainAdminEmail
-        ProxyPass: !Ref ?
-        KeyPairName: !Ref ?
+        ProxyPass: !Ref DomainAdminEmail
+        KeyPairName: !Ref KeyPairName
+        AtChinaRegion: !Ref AtChinaRegion
       TemplateURL: !Join 
         - ''
         - - 'https://'
