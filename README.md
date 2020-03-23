@@ -22,7 +22,8 @@ $ aws ec2  create-key-pair --key-name nginx-keypair
 ```
 The output is an ASCII version of the private key and key fingerprint. You need to save the key (KeyMaterial) to a file.
 
-2. Click [HeRe](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?&templateURL=https:%2F%2Fs3.amazonaws.com%2Fsolutions-reference%2Fcentralized-logging%2Flatest%2Fcentralized-logging-primary.template) for quick launch and choose 'yes' at China region.
+
+2. Click [HeRe](https://cn-northwest-1.console.amazonaws.cn/cloudformation/home?region=cn-northwest-1#/stacks/new?&templateURL=https:%2F%2Fcc-solution-reference.s3.cn-northwest-1.amazonaws.com.cn%2Fcentralized-logging%2Fv3.2%2Fcentralized-logging-primary-china.template) for quick launch and choose 'yes' at China region.
 
 ### Notice
 1. Add addtional user to access Kinbana.

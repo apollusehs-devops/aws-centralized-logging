@@ -23,12 +23,6 @@ Parameters:
     AllowedPattern: '^[_A-Za-z0-9-\+\.]+(\.[_A-Za-z0-9-]+)*@[A-Za-z0-9-]+(\.[A-Za-z0-9]+)*(\.[A-Za-z]{2,})$'
     Description: E-mail address of the Elasticsearch admin, also user name for Kinbana access via the proxy server at China Region.
 
-  # Email address for Cognito Admin user
-  CognitoAdminEmail:
-    Type: String
-    AllowedPattern: '^[_A-Za-z0-9-\+\.]+(\.[_A-Za-z0-9-]+)*@[A-Za-z0-9-]+(\.[A-Za-z0-9]+)*(\.[A-Za-z]{2,})$'
-    Description: E-mail address of the Cognito admin.
-
   # ES cluster size
   ClusterSize:
     Description: Amazon ES cluster size; small (4 data nodes), medium (6 data nodes), large (6 data nodes).
@@ -73,15 +67,6 @@ Parameters:
     Default: 10.250.250.0/24
     ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x
   
-  # Condition for China Region  
-  AtChinaRegion:
-    Description: Deploy the solution at China Region with specific adjustment.
-    Type: String
-    Default: 'No'
-    AllowedValues:
-      - 'Yes'
-      - 'No'
-
   # Key pair for ssh to Nginx instance
   KeyPairName:
     Description:  Key pair for Nginx instance.
@@ -109,22 +94,14 @@ Metadata:
       - DomainAdminEmail
       - ClusterSize
       - SpokeAccounts
-    - Label:
-        default: Cognito Configuration
-      Parameters:
-      - CognitoAdminEmail
+      - KeyPairName
+      - ProxyPass
     - Label:
         default: Do you want to deploy sample log sources?
       Parameters:
       - DemoTemplate
       - DemoVPC
       - DemoSubnet
-    - Label:
-        default: Do you deploy at China Region?
-      Parameters:
-        - AtChinaRegion
-        - KeyPairName
-        - ProxyPass
     ParameterLabels:
       CognitoAdminEmail:
         default: Cognito Admin email address
@@ -142,8 +119,6 @@ Metadata:
         default: VPC CIDR for Sample Sources
       DemoSubnet:
         default: Subnet for Sample Web Server
-      AtChinaRegion:
-        default: Deploy the solution at China Region
       KeyPairName:
         default: Key pair for ssh to Nginx instance
       ProxyPass:
@@ -153,6 +128,12 @@ Mappings:
   InstanceMap:
     send-data: {"SendAnonymousData": "Yes"}
 
+  S3RegionMap:
+    cn-north-1:
+      S3Endpoint: "s3.cn-north-1.amazonaws.com.cn"
+    cn-northwest-1:
+      S3Endpoint: "s3.cn-northwest-1.amazonaws.com.cn"
+      
   ElasticSearch:
     Parameters:
       Version: '6.3'
@@ -172,266 +153,18 @@ Mappings:
   # Lambda source code mapping
   SourceCode:
     General:
-      S3Bucket: "cc-solutions"
+      S3Bucket: "cc-solution"
       KeyPrefix: "centralized-logging/v3.2"
       # TODO
       # S3Bucket: "solutions"
       # KeyPrefix: "centralized-logging/v3.2"
 
-  # S3 endpoint
-  S3RegionMap:
-    ap-east-1:
-      S3Endpoint: "s3.ap-east-1.amazonaws.com"
-    ap-northeast-1:
-      S3Endpoint: "s3.ap-northeast-1.amazonaws.com"
-    ap-northeast-2:
-      S3Endpoint: "s3.ap-northeast-2.amazonaws.com"
-    ap-northeast-3:
-      S3Endpoint: "s3.ap-northeast-3.amazonaws.com"
-    ap-south-1:
-      S3Endpoint: "s3.ap-south-1.amazonaws.com"
-    ap-southeast-1:
-      S3Endpoint: "s3.ap-southeast-1.amazonaws.com"
-    ap-southeast-2:
-      S3Endpoint: "s3.ap-southeast-2.amazonaws.com"
-    ca-central-1:
-      S3Endpoint: "s3.ca-central-1.amazonaws.com"
-    cn-north-1:
-      S3Endpoint: "s3.cn-north-1.amazonaws.com.cn"
-    cn-northwest-1:
-      S3Endpoint: "s3.cn-northwest-1.amazonaws.com.cn"
-    eu-central-1:
-      S3Endpoint: "s3.eu-central-1.amazonaws.com"
-    eu-north-1:
-      S3Endpoint: "s3.eu-north-1.amazonaws.com"
-    eu-west-1:
-      S3Endpoint: "s3.eu-west-1.amazonaws.com"
-    eu-west-2:
-      S3Endpoint: "s3.eu-west-2.amazonaws.com"
-    eu-west-3:
-      S3Endpoint: "s3.eu-west-3.amazonaws.com"
-    me-south-1:
-      S3Endpoint: "s3.me-south-1.amazonaws.com"
-    sa-east-1:
-      S3Endpoint: "s3.sa-east-1.amazonaws.com"
-    us-east-1:
-      S3Endpoint: "s3.amazonaws.com"
-    us-east-2:
-      S3Endpoint: "s3.us-east-2.amazonaws.com"
-    us-gov-east-1:
-      S3Endpoint: "s3.us-gov-east-1.amazonaws.com"
-    us-gov-west-1:
-      S3Endpoint: "s3.us-gov-west-1.amazonaws.com"
-    us-west-1:
-      S3Endpoint: "s3.us-west-1.amazonaws.com"
-    us-west-2:
-      S3Endpoint: "s3.us-west-2.amazonaws.com"
 
 Conditions:
   DemoData: !Equals [!Ref DemoTemplate, 'Yes']
   SingleAccnt: !Equals [!Select [ 0, !Ref SpokeAccounts ], '']
-  NotAtChina: !Equals [!Ref AtChinaRegion, 'No']
-  AtChina: !Equals [!Ref AtChinaRegion, 'Yes']
 
 Resources:
-  #
-  # Cognito and IAM
-  #
-  # Creates a user pool in cognito to auth against
-  UserPool:
-    DeletionPolicy: 'Retain'
-    Type: 'AWS::Cognito::UserPool'
-    Condition: NotAtChina
-    Properties:
-      UserPoolName: !Sub ${DOMAINNAME}_kibana_access
-      AutoVerifiedAttributes:
-        - email
-      MfaConfiguration: 'OFF'
-      EmailVerificationSubject: !Ref AWS::StackName
-      Schema:
-        - Name: name
-          AttributeDataType: String
-          Mutable: true
-          Required: true
-        - Name: email
-          AttributeDataType: String
-          Mutable: false
-          Required: true
-
-  # Custom resource to configure Cognito and ES
-  SetupESCognito:
-    DependsOn: 
-      - 'ElasticsearchAWSLogs'
-      - 'UserPoolDomain'
-    Type: 'Custom::SetupESCognito'
-    Condition: NotAtChina
-    Version: 1.0
-    Properties:
-      ServiceToken: !GetAtt LambdaESCognito.Arn
-      Domain: !Ref DOMAINNAME
-      CognitoDomain: !Sub ${DOMAINNAME}-${AWS::AccountId}
-      UserPoolId: !Ref UserPool
-      IdentityPoolId: !Ref IdentityPool
-      RoleArn: !GetAtt CognitoESAccessRole.Arn
-
-  UserPoolDomain:
-    DeletionPolicy: 'Retain'
-    Type: 'AWS::Cognito::UserPoolDomain'
-    Condition: NotAtChina
-    Properties:
-      Domain: !Sub ${DOMAINNAME}-${AWS::AccountId}
-      UserPoolId: !Ref UserPool
-
-  # Creates a group in Cognito for Kibana ADMIN access
-  UserPoolGroup:
-    DeletionPolicy: 'Retain'
-    Type: "AWS::Cognito::UserPoolGroup"
-    Condition: NotAtChina
-    Properties:
-      Description: 'User pool group for Kibana full access'
-      GroupName: !Sub ${DOMAINNAME}_kibana_admin
-      Precedence: 0
-      UserPoolId: !Ref UserPool
-      RoleArn: !GetAtt CognitoAuthorizedRole.Arn
-
-  # Creates a User Pool Client to be used by the identity pool
-  UserPoolClient:
-    DeletionPolicy: 'Retain'
-    Type: 'AWS::Cognito::UserPoolClient'
-    Condition: NotAtChina
-    Properties:
-      ClientName: !Sub ${DOMAINNAME}-client
-      GenerateSecret: false
-      UserPoolId: !Ref UserPool
-
-  # Creates a federated Identity pool
-  IdentityPool:
-    DeletionPolicy: 'Retain'
-    Type: 'AWS::Cognito::IdentityPool'
-    Condition: NotAtChina
-    Properties:
-      IdentityPoolName: !Sub ${DOMAINNAME}Identity
-      AllowUnauthenticatedIdentities: false # Prevent anonymous access
-      CognitoIdentityProviders:
-        - ClientId: !Ref UserPoolClient
-          ProviderName: !GetAtt UserPool.ProviderName
-          ServerSideTokenCheck: true
-
-  # Assigns the roles to the Identity Pool
-  IdentityPoolRoleMapping:
-    DeletionPolicy: 'Retain'
-    Type: 'AWS::Cognito::IdentityPoolRoleAttachment'
-    Condition: NotAtChina
-    Properties:
-      IdentityPoolId: !Ref IdentityPool
-      Roles:
-        authenticated: !GetAtt CognitoAuthorizedRole.Arn
-
-  CognitoAuthorizedRole:
-    DeletionPolicy: 'Retain'
-    Type: 'AWS::IAM::Role'
-    Condition: NotAtChina
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: 'Allow'
-            Principal:
-              Federated: 'cognito-identity.amazonaws.com'
-            Action:
-              - 'sts:AssumeRoleWithWebIdentity'
-            Condition:
-              StringEquals:
-                'cognito-identity.amazonaws.com:aud': !Ref IdentityPool
-              'ForAnyValue:StringLike':
-                'cognito-identity.amazonaws.com:amr': authenticated
-      Policies:
-        - PolicyName: 'CognitoAccessPolicy'
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: 'Allow'
-                Action: 
-                  - 'es:ESHttp*'
-                Resource: !Sub 'arn:aws:es:${AWS::Region}:${AWS::AccountId}:domain/${DOMAINNAME}/*'
-
-  # Policy passed to the ES API to execute updateElasticsearchDomainConfig
-  CognitoESAccessPolicy:
-    Type: 'AWS::IAM::Policy'
-    Condition: NotAtChina
-    DeletionPolicy: 'Retain'
-    Properties:
-      PolicyName: 'CentralizedLoggingESCognitoAccess'
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Sid: ESCognitoPerms
-            Effect: Allow
-            Action:
-              - 'cognito-idp:DescribeUserPool'
-              - 'cognito-idp:CreateUserPoolClient'
-              - 'cognito-idp:DeleteUserPoolClient'
-              - 'cognito-idp:DescribeUserPoolClient'
-              - 'cognito-idp:AdminInitiateAuth'
-              - 'cognito-idp:AdminUserGlobalSignOut'
-              - 'cognito-idp:ListUserPoolClients'
-              - 'cognito-identity:DescribeIdentityPool'
-              - 'cognito-identity:UpdateIdentityPool'
-              - 'cognito-identity:SetIdentityPoolRoles'
-              - 'cognito-identity:GetIdentityPoolRoles'
-              - 'es:UpdateElasticsearchDomainConfig'
-            Resource: 
-              - !Sub 'arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPool}'
-              - !Sub 'arn:aws:cognito-identity:${AWS::Region}:${AWS::AccountId}:identitypool/${IdentityPool}'
-              - !Sub 'arn:aws:es:${AWS::Region}:${AWS::AccountId}:domain/${DOMAINNAME}'
-          - Sid: 'PassRole'
-            Effect: 'Allow'
-            Action: 'iam:PassRole'
-            Condition:
-              StringLike: 
-                'iam:PassedToService': 'cognito-identity.amazonaws.com'
-            Resource: !GetAtt CognitoESAccessRole.Arn
-      Roles: 
-        - !Ref CognitoESAccessRole
-
-  # with CognitoESAcessPolicy above
-  CognitoESAccessRole:
-    Type: 'AWS::IAM::Role'
-    Condition: NotAtChina
-    DeletionPolicy: 'Retain'
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: 'Allow'
-            Principal:
-              Service: 'es.amazonaws.com'
-            Action:
-              - 'sts:AssumeRole'
-
-  # Create initial cognito user
-  AdminUser:
-    Type: 'AWS::Cognito::UserPoolUser'
-    Condition: NotAtChina
-    DeletionPolicy: 'Retain'
-    Properties:
-      DesiredDeliveryMediums:
-        - 'EMAIL'
-      UserAttributes:
-        - Name: email
-          Value: !Ref CognitoAdminEmail
-      Username: !Ref CognitoAdminEmail
-      UserPoolId: !Ref UserPool
-
-  # Place user in UserPoolGroup
-  CognitoUserGroupAttachment:
-    Type: 'AWS::Cognito::UserPoolUserToGroupAttachment'
-    Condition: NotAtChina
-    Properties:
-      GroupName: !Ref UserPoolGroup
-      Username: !Ref CognitoAdminEmail
-      UserPoolId: !Ref UserPool
-
   LambdaESCognito:
     Type: 'AWS::Lambda::Function'
     Properties:
@@ -472,28 +205,15 @@ Resources:
             - logs:CreateLogGroup
             - logs:CreateLogStream
             - logs:PutLogEvents
-            Resource: arn:aws:logs:*:*:*
+            Resource: arn:aws-cn:logs:*:*:*
           - Effect: Allow
             Action:
             - es:UpdateElasticsearchDomainConfig
-            Resource: !Sub 'arn:aws:es:${AWS::Region}:${AWS::AccountId}:domain/${DOMAINNAME}'
-          - Effect: Allow
-            Action:
-            - cognito-idp:CreateUserPoolDomain
-            - cognito-idp:DeleteUserPoolDomain
-            Resource: 
-              !If
-                - NotAtChina
-                - !GetAtt UserPool.Arn
-                - "*"
+            Resource: !Sub 'arn:aws-cn:es:${AWS::Region}:${AWS::AccountId}:domain/${DOMAINNAME}'
           - Effect: Allow
             Action:
             - iam:PassRole
-            Resource: 
-              !If
-                - NotAtChina
-                - !GetAtt CognitoESAccessRole.Arn
-                - "*"
+            Resource: "*"
     Metadata:
       cfn_nag:
         rules_to_suppress:
@@ -505,7 +225,7 @@ Resources:
   # [LoggingMasterRole, LoggingMasterPolicies, ElasticsearchAWSLogs]
   #
   LoggingMasterRole:
-    DeletionPolicy: 'Retain'
+    DeletionPolicy: 'Delete'
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -524,7 +244,7 @@ Resources:
       Path: "/"
 
   LoggingMasterPolicies:
-    DeletionPolicy: 'Retain' 
+    DeletionPolicy: 'Delete' 
     Type: AWS::IAM::Policy
     Properties:
       PolicyName: !Sub logging-master-${AWS::Region}
@@ -534,7 +254,7 @@ Resources:
         - Effect: Allow
           Action:
           - es:ESHttpPost
-          Resource: !Sub arn:aws:es:${AWS::Region}:${AWS::AccountId}:domain/*
+          Resource: !Sub arn:aws-cn:es:${AWS::Region}:${AWS::AccountId}:domain/*
       Roles:
       - !Ref LoggingMasterRole
     Metadata:
@@ -568,32 +288,16 @@ Resources:
           Principal:
             AWS: !Sub ${LoggingMasterRole.Arn}
           Effect: Allow
-          Resource: !Sub 'arn:aws:es:${AWS::Region}:${AWS::AccountId}:domain/${DOMAINNAME}/*'  
+          Resource: !Sub 'arn:aws-cn:es:${AWS::Region}:${AWS::AccountId}:domain/${DOMAINNAME}/*'  
 
-          # TODO
-          # Following statements is unnecessary if AtChina=Yes
-        - Action: 'es:ESHttp*'
-          Principal:
-            AWS: 
-              !If
-                - NotAtChina
-                - !Sub
-                    - arn:aws:sts::${AWS::AccountId}:assumed-role/${AuthRole}/CognitoIdentityCredentials
-                    - { AuthRole: !Ref CognitoAuthorizedRole }
-                - !Sub ${LoggingMasterRole.Arn}
-          Effect: Allow
-          Resource: !Sub 'arn:aws:es:${AWS::Region}:${AWS::AccountId}:domain/${DOMAINNAME}/*'
         - Action: 'es:*'
           Principal:
             AWS: '*'
           Effect: Allow
-          Resource: !Sub 'arn:aws:es:${AWS::Region}:${AWS::AccountId}:domain/${DOMAINNAME}/*'  
+          Resource: !Sub 'arn:aws-cn:es:${AWS::Region}:${AWS::AccountId}:domain/${DOMAINNAME}/*'  
           Condition:
-            IpAddress: !Join 
-                - ''
-                - - 'aws:SourceIp:'
-                  - '127.0.0.1'
-          #
+            IpAddress:
+              'aws:SourceIp': '127.0.0.1'
       # V57095985 - 10/08/2018 - ES Domain needed configurations
       # https://github.com/awslabs/aws-centralized-logging/issues/2
       AdvancedOptions:
@@ -871,7 +575,7 @@ Resources:
   # [LogStreamerRole, LogStreamer, LogStreamerInvokePermission, DemoStack]
   #
   LogStreamerRole:
-    DeletionPolicy: 'Retain'
+    DeletionPolicy: 'Delete'
     Type: 'AWS::IAM::Role'
     Properties:
       AssumeRolePolicyDocument:
@@ -892,11 +596,11 @@ Resources:
               - logs:CreateLogGroup
               - logs:CreateLogStream
               - logs:PutLogEvents
-              Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*
+              Resource: !Sub arn:aws-cn:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*
             - Effect: Allow
               Action:
               - es:ESHttpPost
-              Resource: !Sub arn:aws:es:${AWS::Region}:${AWS::AccountId}:domain/*
+              Resource: !Sub arn:aws-cn:es:${AWS::Region}:${AWS::AccountId}:domain/*
     Metadata:
       cfn_nag:
         rules_to_suppress:
@@ -948,8 +652,9 @@ Resources:
         - ''
         - - 'https://'
           - !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], "reference"]]
+          - '.'
           - !FindInMap ["S3RegionMap", Ref: "AWS::Region", "S3Endpoint"]
-          - ’/‘
+          - '/'
           - !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"],  "centralized-logging-demo.template"]]
 
   # TODO
@@ -965,21 +670,21 @@ Resources:
   # Setup reverse proxy for access
   NginxStack:
     Type: AWS::CloudFormation::Stack
-    Condition: AtChina
     Properties:
       Parameters:
         ESDomain: !Ref DOMAINNAME
-        DomainEndpoint: !Sub ${ElasticsearchAWSLogs.DomainEndpoint}
+        ESDomainEndpoint: !Sub ${ElasticsearchAWSLogs.DomainEndpoint}
         ProxyUsername: !Ref DomainAdminEmail
         ProxyPass: !Ref DomainAdminEmail
         KeyPairName: !Ref KeyPairName
-        AtChinaRegion: !Ref AtChinaRegion
+        AtChinaRegion: "Yes"
       TemplateURL: !Join 
         - ''
         - - 'https://'
           - !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], "reference"]]
+          - '.'
           - !FindInMap ["S3RegionMap", Ref: "AWS::Region", "S3Endpoint"]
-          - ’/‘
+          - '/'
           - !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"],  "centralized-logging-nginx.template"]]
   
   #
