@@ -655,7 +655,7 @@ Resources:
           - '.'
           - !FindInMap ["S3RegionMap", Ref: "AWS::Region", "S3Endpoint"]
           - '/'
-          - !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"],  "centralized-logging-demo.template"]]
+          - !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"],  "centralized-logging-demo-china.template"]]
 
   # TODO
   # Find a replacement of UUID

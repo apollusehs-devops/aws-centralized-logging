@@ -102,6 +102,7 @@ describe('ES_Logging_TestSuite', function() {
 
         let sourcedata = Logging.buildSource(_awslogs_data2.message,
           _awslogs_data2.extractedFields);
+        console.log(sourcedata)
         assert.deepEqual(sourcedata, _source);
         done();
 

@@ -403,7 +403,7 @@ Resources:
                 --domain-name ${ESDomain} |\
                 jq '.DomainConfig.AccessPolicies.Options' |\
                 sed -e 's/\\//g;s/^"//;s/"$//'|sed -e 's/"aws:SourceIp".*}}}/"aws:SourceIp":'"$NGINX_NODE_IPS"'}}}/g')
-              aws es update-elasticsearch-domain-config --region ${AWS::Region} --domain-name cltest \
+              aws es update-elasticsearch-domain-config --region ${AWS::Region} --domain-name ${ESDomain} \
                 --access-policies "$NEW_POLICY"
               
       LaunchTemplateName: !Sub '${AWS::StackName}-fleet-template'
