@@ -1,20 +1,17 @@
 # AWS Centralized Logging Solution
-The AWS Centralized Logging Solution is a reference implementation that provides a foundation for logging to a centralized account. Customers can leverage the solution to index CloudTrail Logs, CW Logs, VPC Flow Logs on a ElasticSearch domain. The logs can then be searched on different fields.
+The AWS Centralized Logging Solution is a reference implementation that provides a foundation for logging to a centralized account in China regions. The solution is forked from https://aws.amazon.com/solutions/centralized-logging/, which is the best fit for global offering.
 
-## Getting Started
-To get started with the AWS Centralized Logging Solution, please review the solution documentation. https://aws.amazon.com/answers/logging/centralized-logging/
+Customers can leverage the solution to index CloudTrail Logs, CW Logs, VPC Flow Logs on a ElasticSearch domain. The logs can then be searched on different fields.
 
 
-## Launch at China Region
-
-### Architectural changes
+## Architectural design
 
 See following architecture as changed edition.
 
 ![architecture diagram with Nginx](./docs/nginx-diagram.jpg)
 
 
-### Quick start
+## Quick start
 
 1. Generate key pair through admin console or awccli.
 ```
@@ -25,7 +22,7 @@ The output is an ASCII version of the private key and key fingerprint. You need 
 
 2. Click [HeRe](https://cn-northwest-1.console.amazonaws.cn/cloudformation/home?region=cn-northwest-1#/stacks/new?&templateURL=https:%2F%2Fcc-solution-reference.s3.cn-northwest-1.amazonaws.com.cn%2Fcentralized-logging%2Fv3.2%2Fcentralized-logging-primary-china.template) for quick launch and choose 'yes' at China region.
 
-### Notice
+## Notice
 1. Add addtional user to access Kinbana.
 ```
 # format// user:password
@@ -40,8 +37,6 @@ $ cp new_certificate /etc/nginx/cert.crt
 $ cp new_certificate_key /etc/nginx/cert.key
 ```
 
-## Upgrading to v3.2
-Customers using v3.0.0 can upgrade to v3.2 by loading the new primary template. Spoke templates, however, must be removed and installed from the v3.2 spoke template.
 
 ## Running unit tests for customization
 * Clone the repository, then make the desired code changes
@@ -76,34 +71,12 @@ aws s3 cp ./dist/ s3://my-bucket-name-<aws_region>/centralized-logging/<my-versi
 * Get the link of the centralized-logging-primary.template uploaded to your Amazon S3 bucket.
 * Deploy the AWS Centralized Logging Solution to your account by launching a new AWS CloudFormation stack using the link of the centralized-logging-primary.template.
 
-## File Structure
-The AWS Centralized Logging Solution project consists of indexing microservices which is deployed to a serverless environment in AWS Lambda.
 
-```
-|-source/
-  |-services/
-    |-indexing/      [ microservice for indexing logs on ES domain ]
-      |-lib/
-        |-[ service module unit tests ]
-        |-basic-dashboard.json [ sample dashboard for kibana ]
-        |-logger.js [ logger class ]
-        |-metrics-helper.js [ helper module for sending anonymous metrics ]
-      |-index.js [ injection point for microservice ]
-      |-package.json
-    |-auth/      [ microservice for enabling Cognito auth ]
-      |-index.js [ injection point for microservice ]
-      |-logger.js [ logger class ]
-      |-package.json
-```
-***
 
-## v3.0.1 changes
-```
-* Amazon Cognito integration for user login
-* Elasticsearch version update to 6.3
-* Elasticsearch encryption at rest
-* T-shirt sizing update
-```
+## Todo
+ - [x] Building universe collecting layer to integrate various log sources and destinations.
+ - [x] Customizable dashboard for classic applications with AWS practices.
+
 
 ***
 

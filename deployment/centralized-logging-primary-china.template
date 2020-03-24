@@ -637,7 +637,7 @@ Resources:
     Properties:
       FunctionName: !Sub ${LogStreamer}
       Action: lambda:InvokeFunction
-      Principal: !Sub logs.${AWS::Region}.amazonaws.com
+      Principal: !Sub logs.${AWS::Region}.amazonaws.com.cn
       SourceAccount: !Sub ${AWS::AccountId}
 
   DemoStack:
@@ -670,12 +670,13 @@ Resources:
   # Setup reverse proxy for access
   NginxStack:
     Type: AWS::CloudFormation::Stack
+    DependsOn: ElasticsearchAWSLogs
     Properties:
       Parameters:
         ESDomain: !Ref DOMAINNAME
         ESDomainEndpoint: !Sub ${ElasticsearchAWSLogs.DomainEndpoint}
         ProxyUsername: !Ref DomainAdminEmail
-        ProxyPass: !Ref DomainAdminEmail
+        ProxyPass: !Ref ProxyPass
         KeyPairName: !Ref KeyPairName
         AtChinaRegion: "Yes"
       TemplateURL: !Join 

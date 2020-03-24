@@ -70,7 +70,7 @@ Parameters:
   AtChinaRegion:
     Description: Deploy the solution at China Region with specific adjustment.
     Type: String
-    Default: 'No'
+    Default: 'Yes'
     AllowedValues:
       - 'Yes'
       - 'No'
@@ -402,7 +402,7 @@ Resources:
               export NEW_POLICY=$(aws es describe-elasticsearch-domain-config --region ${AWS::Region} \
                 --domain-name ${ESDomain} |\
                 jq '.DomainConfig.AccessPolicies.Options' |\
-                sed -e 's/\\//g;s/^"//;s/"$//'|sed -e 's/"aws:SourceIp".*}}},/"aws:SourceIp":'"$NGINX_NODE_IPS"'}}},/g')
+                sed -e 's/\\//g;s/^"//;s/"$//'|sed -e 's/"aws:SourceIp".*}}}/"aws:SourceIp":'"$NGINX_NODE_IPS"'}}}/g')
               aws es update-elasticsearch-domain-config --region ${AWS::Region} --domain-name cltest \
                 --access-policies "$NEW_POLICY"
               
@@ -436,14 +436,18 @@ Resources:
   NginxNodePolicies:
     Type: AWS::IAM::Policy
     Properties:
-      PolicyName: !Sub ${AWS::StackName}-nginxnode-policy
+      PolicyName: !Sub '${AWS::StackName}-nginxnode-policy'
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
         - Effect: Allow
           Action:
             - "es:*"
-          Resource: !Sub arn:aws:es:${AWS::Region}:${AWS::AccountId}:domain/*
+          Resource: 
+            !If
+              - AtChina
+              - !Sub 'arn:aws-cn:es:${AWS::Region}:${AWS::AccountId}:domain/*'
+              - !Sub 'arn:aws:es:${AWS::Region}:${AWS::AccountId}:domain/*'
         - Effect: Allow
           Action:
             - "ec2:DescribeInstances"
